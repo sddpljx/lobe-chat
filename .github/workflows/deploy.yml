@@ -9,12 +9,22 @@ on:
 
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  deploy:
+  setup:
     runs-on: ubuntu-latest
+    outputs:
+      is-production: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+    steps:
+      - run: echo "Determining deploy target"
+
+  deploy-a:
+    needs: setup
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_A }}
     steps:
       - uses: actions/checkout@v4
 
@@ -32,26 +42,72 @@ jobs:
       - name: Install Vercel CLI
         run: bun add -g vercel
 
-      - name: Pull Vercel Environment (Preview)
-        if: github.event_name == 'pull_request'
-        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Pull Vercel Environment
+        run: |
+          if [ "${{ needs.setup.outputs.is-production }}" = "true" ]; then
+            vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+          else
+            vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
+          fi
 
-      - name: Pull Vercel Environment (Production)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Build
+        run: |
+          if [ "${{ needs.setup.outputs.is-production }}" = "true" ]; then
+            vercel build --prod --token=$VERCEL_TOKEN
+          else
+            vercel build --token=$VERCEL_TOKEN
+          fi
 
-      - name: Build (Preview)
-        if: github.event_name == 'pull_request'
-        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy
+        run: |
+          if [ "${{ needs.setup.outputs.is-production }}" = "true" ]; then
+            vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+          else
+            vercel deploy --prebuilt --token=$VERCEL_TOKEN
+          fi
 
-      - name: Build (Production)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+  deploy-b:
+    needs: setup
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_B }}
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Deploy (Preview)
-        if: github.event_name == 'pull_request'
-        run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
-      - name: Deploy (Production)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Install Vercel CLI
+        run: bun add -g vercel
+
+      - name: Pull Vercel Environment
+        run: |
+          if [ "${{ needs.setup.outputs.is-production }}" = "true" ]; then
+            vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+          else
+            vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
+          fi
+
+      - name: Build
+        run: |
+          if [ "${{ needs.setup.outputs.is-production }}" = "true" ]; then
+            vercel build --prod --token=$VERCEL_TOKEN
+          else
+            vercel build --token=$VERCEL_TOKEN
+          fi
+
+      - name: Deploy
+        run: |
+          if [ "${{ needs.setup.outputs.is-production }}" = "true" ]; then
+            vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+          else
+            vercel deploy --prebuilt --token=$VERCEL_TOKEN
+          fi
