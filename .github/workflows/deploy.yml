@@ -61,9 +61,9 @@ jobs:
       - name: Deploy
         run: |
           if [ "${{ needs.setup.outputs.is-production }}" = "true" ]; then
-            vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+            vercel deploy --prebuilt --archive=tgz --prod --token=$VERCEL_TOKEN
           else
-            vercel deploy --prebuilt --token=$VERCEL_TOKEN
+            vercel deploy --prebuilt --archive=tgz --token=$VERCEL_TOKEN
           fi
 
   deploy-b:
@@ -107,7 +107,7 @@ jobs:
       - name: Deploy
         run: |
           if [ "${{ needs.setup.outputs.is-production }}" = "true" ]; then
-            vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+            vercel deploy --prebuilt --archive=tgz --prod --token=$VERCEL_TOKEN
           else
-            vercel deploy --prebuilt --token=$VERCEL_TOKEN
+            vercel deploy --prebuilt --archive=tgz --token=$VERCEL_TOKEN
           fi
