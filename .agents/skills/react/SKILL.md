@@ -1,6 +1,6 @@
 ---
 name: react
-description: "LobeHub React component conventions — base-ui (`@lobehub/ui/base-ui`) first for headless primitives (Select, Modal, DropdownMenu, ContextMenu, Popover, ScrollArea, Switch, Toast, FloatingSheet), then `@lobehub/ui` root, antd as last resort; styling via `antd-style` `createStaticStyles` + `cssVar.*` (zero-runtime preferred over `createStyles` + `token`); routing via `react-router-dom` (not `next/link`). Use when writing or editing any `.tsx` under `src/**`. Triggers on `createStaticStyles`, `createStyles`, `cssVar`, `antd-style`, `Flexbox`, `Center`, `Select`, `Modal`, `Drawer`, `Button`, `Tooltip`, `DropdownMenu`, `ContextMenu`, `Popover`, `Switch`, `ScrollArea`, `Toast`, `FloatingSheet`, `Link`, `useNavigate`, `react-router-dom`, `next/link`, `desktopRouter`, `componentMap.desktop`, `.desktop.tsx`, `base-ui`, `@lobehub/ui/base-ui`, 'new component', 'new page', 'edit layout', 'add styles', 'zustand selector', '@lobehub/ui', 'antd import'."
+description: 'LobeHub React component conventions. Use when editing TSX UI, choosing base-ui vs @lobehub/ui vs antd, styling with antd-style, routing, desktop variants, layouts, or component state.'
 user-invocable: false
 ---
 
@@ -52,6 +52,16 @@ For Modal specifically, see the dedicated **modal** skill — use the imperative
 | Feedback     | Alert, Drawer                                                                         |
 | Layout       | Center, DraggablePanel, Flexbox, Grid, Header, MaskShadow                             |
 | Navigation   | Burger, Menu, SideNav, Tabs                                                           |
+
+## Loading indicators
+
+**Do NOT use antd `Spin` / `<Spin />`.** Use a project loader
+(`NeuralNetworkLoading`, `DotsLoading`, …) — see the **ux** skill ("Loading
+visuals") for the component table and when to use each.
+
+## State
+
+When a feature component manages more than 3 pieces of state (`useState`/`useReducer`/derived state), extract the logic into a custom hook (e.g. `useXxx`). Keep the component focused on rendering — the hook holds state and handlers, so logic can be unit-tested without rendering the component.
 
 ## Layout
 
@@ -108,6 +118,7 @@ errorElement: <ErrorBoundary />;
 | ------------------------------------------------------------------ | --------------------------------------------------------------------------- |
 | Using `next/link` in SPA                                           | Use `react-router-dom` `Link`                                               |
 | Using antd directly                                                | Use `@lobehub/ui/base-ui` first, then `@lobehub/ui`                         |
+| antd `Spin` / `<Spin />` for loading                               | Use `NeuralNetworkLoading` / project loaders (see the **ux** skill)         |
 | `import { Select } from '@lobehub/ui'`                             | `import { Select } from '@lobehub/ui/base-ui'`                              |
 | `import { Modal } from '@lobehub/ui'` + `<Modal open>` declarative | `createModal` / `confirmModal` from `@lobehub/ui/base-ui` (see modal skill) |
 | `import { DropdownMenu/Popover/Switch } from '@lobehub/ui'`        | Import same name from `@lobehub/ui/base-ui` instead                         |

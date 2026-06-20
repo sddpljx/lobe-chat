@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import type { BaseDataModel } from '../meta';
 
 // Type definitions
@@ -11,8 +13,19 @@ export type TimeGroupId =
   | `${number}-${string}`
   | `${number}`;
 
-export type TopicGroupMode = 'byTime' | 'byProject' | 'flat';
+export type TopicGroupMode = 'byTime' | 'byProject' | 'flat' | 'byStatus';
 export type TopicSortBy = 'createdAt' | 'updatedAt';
+
+/**
+ * Server-side ordering for the topic list query.
+ * - `updatedAt` (default): favorites first, then most-recently-updated.
+ * - `status`: favorites first, then by status priority
+ *   (waitingForHuman → running → active → paused → failed → completed →
+ *   archived), then most-recently-updated within each status. Backs the
+ *   sidebar "group by status" mode so the highest-priority topics stay on the
+ *   first page regardless of pagination.
+ */
+export type TopicQuerySortBy = 'updatedAt' | 'status';
 
 export interface GroupedTopic {
   children: ChatTopic[];
@@ -179,14 +192,30 @@ export interface ChatTopicSummary {
   provider: string;
 }
 
-export type ChatTopicStatus =
-  | 'active'
-  | 'running'
-  | 'paused'
-  | 'waitingForHuman'
-  | 'failed'
-  | 'completed'
-  | 'archived';
+/**
+ * Canonical, ordered list of topic statuses. Single source of truth for both
+ * the {@link ChatTopicStatus} type and the {@link chatTopicStatusSchema} zod
+ * validator (consumed by the topic TRPC router). Add new statuses here.
+ *
+ * - `unread`: a completed generation the user hasn't read yet. Persisted so the
+ *   unread indicator survives reload and syncs across devices; cleared back to
+ *   `active` when the user opens the topic. See operation slice unread actions.
+ */
+export const TOPIC_STATUSES = [
+  'active',
+  'running',
+  'paused',
+  'waitingForHuman',
+  'failed',
+  'completed',
+  'archived',
+  'unread',
+] as const;
+
+/** Zod validator for {@link ChatTopicStatus}, derived from {@link TOPIC_STATUSES}. */
+export const chatTopicStatusSchema = z.enum(TOPIC_STATUSES);
+
+export type ChatTopicStatus = z.infer<typeof chatTopicStatusSchema>;
 
 export interface ChatTopic extends Omit<BaseDataModel, 'meta'> {
   completedAt?: Date | null;
@@ -206,14 +235,15 @@ export interface ChatTopic extends Omit<BaseDataModel, 'meta'> {
   /** Server-side mock until real token aggregation lands. */
   tokenUsage?: number | null;
   trigger?: string | null;
+  userId?: string;
 }
 
 export type ChatTopicMap = Record<string, ChatTopic>;
 
 export interface TopicRankItem {
+  agentId: string | null;
   count: number;
   id: string;
-  sessionId: string | null;
   title: string | null;
 }
 
@@ -280,6 +310,11 @@ export interface QueryTopicParams {
    */
   isInbox?: boolean;
   pageSize?: number;
+  /**
+   * Server-side ordering. Defaults to `updatedAt`. Use `status` to back the
+   * sidebar "group by status" mode so high-priority topics stay on page one.
+   */
+  sortBy?: TopicQuerySortBy;
   /**
    * Include only topics matching the given trigger types (positive filter)
    */
